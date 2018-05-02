@@ -102,4 +102,4 @@ getOsmAndType = proc l -> do
 -- option: withProxy "www-cache:3128"
 -- https://hackage.haskell.org/package/hxt-9.3.1.16/docs/Text-XML-HXT-Arrow-ReadDocument.html
 osmAndContentFromXml :: OsmAndType -> IO [OsmAndContent]
-osmAndContentFromXml o = runX $ parseOsmAndXml //> hasAttrValue "type" (\x -> x == show o) >>> getOsmAndType
+osmAndContentFromXml o = runX $ parseOsmAndXml //> hasAttrValue "type" ((==) (show o)) >>> getOsmAndType
