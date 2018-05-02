@@ -9,6 +9,7 @@ import OsmAnd
 
 main :: IO ()
 main = do
+
   osmAndIndexes <- parseOsmAndIndexes
   w <- execOsmAnd (ctx osmAndIndexes) $ do
     osmAndContentFromXml Voice -- voice
@@ -20,14 +21,15 @@ main = do
       >> osmAndContentFromXml RoadMap -- road_map
       >> osmAndContentFromXml SrtmMap -- srtm_map
       >> osmAndContentFromXml Hillshade -- hillshade
+
   case w of
     (osmAndContent, osmAndXmlTree) -> do
       osmAndContentToXmlFIle "/tmp/osmand.xml" osmAndXmlTree
       osmAndContent >>= mapM (print . osmAndContentName)
+
   return ()
   
   where
-    -- ctx = OsmAndContext Nothing Nothing
     filters = ["french"
               , "france"
               , "World"]
