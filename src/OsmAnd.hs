@@ -73,16 +73,16 @@ parseOsmAndXml = readDocument [withHTTP []] (basews <> "/get_indexes?xml")
 getOsmAndType :: IOSLA (XIOState ()) XmlTree OsmAndContent
 getOsmAndType = do
   proc l -> do
-    root <- getName -< l
-    name <- getAttrValue "name" -< l
-    otype <- getAttrValue "type" -< l
+    root          <- getName                      -< l
+    name          <- getAttrValue "name"          -< l
+    otype         <- getAttrValue "type"          -< l
     containerSize <- getAttrValue "containerSize" -< l
-    contentSize <- getAttrValue "contentSize" -< l
-    timestamp <- getAttrValue "timestamp" -< l
-    date <- getAttrValue "date" -< l
-    size <- getAttrValue "size" -< l
-    targetsize <- getAttrValue "targetsize" -< l
-    description <- getAttrValue "description" -< l
+    contentSize   <- getAttrValue "contentSize"   -< l
+    timestamp     <- getAttrValue "timestamp"     -< l
+    date          <- getAttrValue "date"          -< l
+    size          <- getAttrValue "size"          -< l
+    targetsize    <- getAttrValue "targetsize"    -< l
+    description   <- getAttrValue "description"   -< l
     returnA -< OsmAndContent { osmAndContentRoot = root
                              , osmAndContentType = read otype::OsmAndType
                              , osmAndContentContainerSize = (read containerSize::Integer)
@@ -102,3 +102,11 @@ osmAndContentFromXml o = do
   let xmlT = parseOsmAndXml //> hasAttrValue "type" ((==) (show o))
   liftIO (runX xmlT) >>= tell
   return $ runX $ xmlT >>> getOsmAndType
+
+osmAndBaseXmlDoc xtree = root [] [mkelem "osmand_regions" [sattr "mapversion" "1"] [constL xtree]]
+
+osmAndContentToXml :: [XmlTree] -> IO String
+osmAndContentToXml xtree = (runX $ osmAndBaseXmlDoc xtree >>> writeDocumentToString []) >>= return . concat
+
+-- osmAndContentToXmlFile :: String -> [XmlTree] -> IO ()
+osmAndContentToXmlFIle f xtree = (runX $ osmAndBaseXmlDoc xtree >>> writeDocument [] f) >> return ()
