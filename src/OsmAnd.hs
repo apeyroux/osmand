@@ -4,17 +4,25 @@
 module OsmAnd (
   OsmAndType (..)
   , OsmAndContent (..)
+  , OsmAndContext (..)
+  , parseOsmAndIndexes
   , osmAndContentFromXml
   , osmAndContentToXmlFIle
   , osmAndContentToXml
+  , execOsmAnd
   ) where
 
 import Control.Monad.Writer
+import Control.Monad.Reader
+-- import Data.Default.Class
 import Data.Char
 import Data.List
 import Data.Monoid
+import Data.Maybe
 import Text.XML.HXT.Core
 import Text.XML.HXT.HTTP
+
+type Filter = String
 
 data OsmAndContent = OsmAndContent {
   osmAndContentRoot :: String
@@ -38,6 +46,15 @@ data OsmAndType = Map -- map
                 | RoadMap -- road_map
                 | SrtmMap -- srtm_map
                 | Hillshade -- hillshade
+
+data OsmAndContext = OsmAndContext {
+  osmAndContextProxy :: Maybe String
+  , osmAndContextIndexes :: [XmlTree]
+  , osmAndContextFilters :: Maybe [Filter] -- todo: Maybe for all or Just x
+  }
+
+-- instance Default OsmAndContext where
+--   def = OsmAndContext Nothing Nothing Nothing
 
 instance Show OsmAndType where
   show Map = "map"
@@ -71,8 +88,8 @@ instance Read OsmAndType where
 basews :: String
 basews = "http://download.osmand.net"
 
-parseOsmAndXml :: IOStateArrow s b XmlTree
-parseOsmAndXml = readDocument [withHTTP []] (basews <> "/get_indexes?xml")
+parseOsmAndIndexes :: IO [XmlTree]
+parseOsmAndIndexes = runX $ readDocument [withHTTP []] (basews <> "/get_indexes?xml")
 
 -- osmAndDescriptionContain :: String -> [XmlTree] -> IO [XmlTree]
 -- osmAndDescriptionContain q xtree = runX $ constL xtree >>> hasAttrValue "description" (\d -> (isInfixOf ((toUpper <$> q)::String) ((toUpper <$> d)::String)))
@@ -104,14 +121,20 @@ getOsmAndType = do
 
 -- option: withProxy "www-cache:3128"
 -- https://hackage.haskell.org/package/hxt-9.3.1.16/docs/Text-XML-HXT-Arrow-ReadDocument.html
-osmAndContentFromXml :: OsmAndType -> [String] -> WriterT [XmlTree] IO (IO [OsmAndContent])
-osmAndContentFromXml o q = do
-  let xmlT = parseOsmAndXml //> hasAttrValue "type" ((==) (show o))
-        >>> hasAttrValue "description" (\d -> elem True (map (\s -> isInfixOf (toUpperString s) (toUpperString d)) q))
-  liftIO (runX xmlT) >>= tell
-  return $ runX $ xmlT >>> getOsmAndType
+osmAndContentFromXml :: OsmAndType -> ReaderT OsmAndContext (WriterT (IO [OsmAndContent], [XmlTree]) IO) (IO [OsmAndContent])
+osmAndContentFromXml o = do
+  ctx <- ask
+  d <- return $ runX $ (xmlT ctx) >>> getOsmAndType
+  liftIO (runX (xmlT ctx)) >>= (\x -> lift $ tell (d, x))
+  return $ runX $ (xmlT ctx) >>> getOsmAndType
   where
+    ctxIndexes ctx = osmAndContextIndexes ctx
+    baseXmlT x = (constL x) //> hasAttrValue "type" ((==) (show o))
     toUpperString s = toUpper <$> s::String
+    xmlT ctx = case osmAndContextFilters ctx of
+             Just filters -> baseXmlT (ctxIndexes ctx)
+               >>> hasAttrValue "description" (\d -> elem True (map (\s -> isInfixOf (toUpperString s) (toUpperString d)) filters))
+             Nothing -> baseXmlT (ctxIndexes ctx)
 
 osmAndBaseXmlDoc :: ArrowXml a => [XmlTree] -> a n XmlTree
 osmAndBaseXmlDoc xtree = root [] [mkelem "osmand_regions" [sattr "mapversion" "1"] [constL xtree]]
@@ -121,3 +144,6 @@ osmAndContentToXml xtree = (runX $ osmAndBaseXmlDoc xtree >>> writeDocumentToStr
 
 osmAndContentToXmlFIle :: String -> [XmlTree] -> IO ()
 osmAndContentToXmlFIle f xtree = (runX $ osmAndBaseXmlDoc xtree >>> writeDocument [] f) >> return ()
+
+execOsmAnd :: Monad m => r -> ReaderT r (WriterT w m) a -> m w
+execOsmAnd ctx f = execWriterT $ runReaderT f ctx
