@@ -5,12 +5,16 @@ module OsmAnd (
   OsmAndType (..)
   , OsmAndContent (..)
   , osmAndContentFromXml
+  , osmAndContentToXmlFIle
+  , osmAndContentToXml
   ) where
 
+import Control.Monad.Writer
+import Data.Char
+import Data.List
 import Data.Monoid
 import Text.XML.HXT.Core
 import Text.XML.HXT.HTTP
-import Control.Monad.Writer
 
 data OsmAndContent = OsmAndContent {
   osmAndContentRoot :: String
@@ -70,6 +74,9 @@ basews = "http://download.osmand.net"
 parseOsmAndXml :: IOStateArrow s b XmlTree
 parseOsmAndXml = readDocument [withHTTP []] (basews <> "/get_indexes?xml")
 
+-- osmAndDescriptionContain :: String -> [XmlTree] -> IO [XmlTree]
+-- osmAndDescriptionContain q xtree = runX $ constL xtree >>> hasAttrValue "description" (\d -> (isInfixOf ((toUpper <$> q)::String) ((toUpper <$> d)::String)))
+
 getOsmAndType :: IOSLA (XIOState ()) XmlTree OsmAndContent
 getOsmAndType = do
   proc l -> do
@@ -97,16 +104,20 @@ getOsmAndType = do
 
 -- option: withProxy "www-cache:3128"
 -- https://hackage.haskell.org/package/hxt-9.3.1.16/docs/Text-XML-HXT-Arrow-ReadDocument.html
-osmAndContentFromXml :: OsmAndType -> WriterT [XmlTree] IO (IO [OsmAndContent])
-osmAndContentFromXml o = do
+osmAndContentFromXml :: OsmAndType -> [String] -> WriterT [XmlTree] IO (IO [OsmAndContent])
+osmAndContentFromXml o q = do
   let xmlT = parseOsmAndXml //> hasAttrValue "type" ((==) (show o))
+        >>> hasAttrValue "description" (\d -> elem True (map (\s -> isInfixOf (toUpperString s) (toUpperString d)) q))
   liftIO (runX xmlT) >>= tell
   return $ runX $ xmlT >>> getOsmAndType
+  where
+    toUpperString s = toUpper <$> s::String
 
+osmAndBaseXmlDoc :: ArrowXml a => [XmlTree] -> a n XmlTree
 osmAndBaseXmlDoc xtree = root [] [mkelem "osmand_regions" [sattr "mapversion" "1"] [constL xtree]]
 
 osmAndContentToXml :: [XmlTree] -> IO String
 osmAndContentToXml xtree = (runX $ osmAndBaseXmlDoc xtree >>> writeDocumentToString []) >>= return . concat
 
--- osmAndContentToXmlFile :: String -> [XmlTree] -> IO ()
+osmAndContentToXmlFIle :: String -> [XmlTree] -> IO ()
 osmAndContentToXmlFIle f xtree = (runX $ osmAndBaseXmlDoc xtree >>> writeDocument [] f) >> return ()
