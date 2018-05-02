@@ -2,16 +2,8 @@
 {-# LANGUAGE Arrows, NoMonomorphismRestriction #-}
 
 module OsmAnd (
-  OsmAndType (Map
-             , Voice
-             , Fonts
-             , Depth
-             , WikiMap
-             , WikiVoyage
-             , RoadMap
-             , SrtmMap
-             , Hillshade)
-  , OsmAndContent
+  OsmAndType (..)
+  , OsmAndContent (..)
   , osmAndContentFromXml
   ) where
 
