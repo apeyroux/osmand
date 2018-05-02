@@ -23,6 +23,7 @@ library
                      , text
                      , hxt
                      , hxt-http
+                     , mtl
                      
 executable osmand
   main-is:             Main.hs

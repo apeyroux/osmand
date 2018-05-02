@@ -10,6 +10,7 @@ module OsmAnd (
 import Data.Monoid
 import Text.XML.HXT.Core
 import Text.XML.HXT.HTTP
+import Control.Monad.Writer
 
 data OsmAndContent = OsmAndContent {
   osmAndContentRoot :: String
@@ -66,32 +67,38 @@ instance Read OsmAndType where
 basews :: String
 basews = "http://download.osmand.net"
 
+parseOsmAndXml :: IOStateArrow s b XmlTree
 parseOsmAndXml = readDocument [withHTTP []] (basews <> "/get_indexes?xml")
 
-getOsmAndType = proc l -> do
-  root <- getName -< l
-  name <- getAttrValue "name" -< l
-  otype <- getAttrValue "type" -< l
-  containerSize <- getAttrValue "containerSize" -< l
-  contentSize <- getAttrValue "contentSize" -< l
-  timestamp <- getAttrValue "timestamp" -< l
-  date <- getAttrValue "date" -< l
-  size <- getAttrValue "size" -< l
-  targetsize <- getAttrValue "targetsize" -< l
-  description <- getAttrValue "description" -< l
-  returnA -< OsmAndContent { osmAndContentRoot = root
-                           , osmAndContentType = read otype::OsmAndType
-                           , osmAndContentContainerSize = (read containerSize::Integer)
-                           , osmAndContentContentSize = (read contentSize::Integer)
-                           , osmAndContentTimeStamp = (read timestamp::Integer)
-                           , osmAndContentDate = date
-                           , osmAndContentSize = (read size::Float)
-                           , osmAndContentTargetSize = (read targetsize::Float)
-                           , osmAndContentName = name
-                           , osmAndContentDescription = description
-                           }
+getOsmAndType :: IOSLA (XIOState ()) XmlTree OsmAndContent
+getOsmAndType = do
+  proc l -> do
+    root <- getName -< l
+    name <- getAttrValue "name" -< l
+    otype <- getAttrValue "type" -< l
+    containerSize <- getAttrValue "containerSize" -< l
+    contentSize <- getAttrValue "contentSize" -< l
+    timestamp <- getAttrValue "timestamp" -< l
+    date <- getAttrValue "date" -< l
+    size <- getAttrValue "size" -< l
+    targetsize <- getAttrValue "targetsize" -< l
+    description <- getAttrValue "description" -< l
+    returnA -< OsmAndContent { osmAndContentRoot = root
+                             , osmAndContentType = read otype::OsmAndType
+                             , osmAndContentContainerSize = (read containerSize::Integer)
+                             , osmAndContentContentSize = (read contentSize::Integer)
+                             , osmAndContentTimeStamp = (read timestamp::Integer)
+                             , osmAndContentDate = date
+                             , osmAndContentSize = (read size::Float)
+                             , osmAndContentTargetSize = (read targetsize::Float)
+                             , osmAndContentName = name
+                             , osmAndContentDescription = description
+                             }
 
 -- option: withProxy "www-cache:3128"
 -- https://hackage.haskell.org/package/hxt-9.3.1.16/docs/Text-XML-HXT-Arrow-ReadDocument.html
-osmAndContentFromXml :: OsmAndType -> IO [OsmAndContent]
-osmAndContentFromXml o = runX $ parseOsmAndXml //> hasAttrValue "type" ((==) (show o)) >>> getOsmAndType
+osmAndContentFromXml :: OsmAndType -> WriterT [XmlTree] IO (IO [OsmAndContent])
+osmAndContentFromXml o = do
+  let xmlT = parseOsmAndXml //> hasAttrValue "type" ((==) (show o))
+  liftIO (runX xmlT) >>= tell
+  return $ runX $ xmlT >>> getOsmAndType
