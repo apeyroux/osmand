@@ -12,7 +12,7 @@ module OsmAnd (
              , SrtmMap
              , Hillshade)
   , OsmAndContent
-  , osmAndXml
+  , osmAndContentFromXml
   ) where
 
 import Data.Monoid
@@ -101,5 +101,5 @@ getOsmAndType = proc l -> do
 
 -- option: withProxy "www-cache:3128"
 -- https://hackage.haskell.org/package/hxt-9.3.1.16/docs/Text-XML-HXT-Arrow-ReadDocument.html
-osmAndXml :: OsmAndType -> IO [OsmAndContent]
-osmAndXml o = runX $ parseOsmAndXml //> hasAttrValue "type" (\x -> x == show o) >>> getOsmAndType
+osmAndContentFromXml :: OsmAndType -> IO [OsmAndContent]
+osmAndContentFromXml o = runX $ parseOsmAndXml //> hasAttrValue "type" (\x -> x == show o) >>> getOsmAndType
