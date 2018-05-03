@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-} 
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
 
 module Main where
 
@@ -8,17 +9,25 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as ByteString (length)
 import           Data.ByteString.Char8 as ByteString (unpack)
 import           Data.Conduit (ConduitM
+                              , Sink
                               , await
                               , yield
+                              , runConduit
+                              , (.|)
                               , ($$+-)
                               , ($=+))
-import           Data.Conduit.List (sinkNull)
+import           Data.Conduit.Combinators (sinkFile)
+import Control.Monad.Trans.Resource (runResourceT)
 import           Data.Monoid
-import           Network.HTTP.Conduit (http
-                                      , parseUrl
-                                      , responseBody
-                                      , responseHeaders
-                                      , withManager)
+import           Network.HTTP.Conduit
+-- import           Network.HTTP.Conduit (http
+--                                       , parseUrl
+--                                       , responseBody
+--                                       , tlsManagerSettings
+--                                       , newManager
+--                                       , httpLbs
+--                                       , parseRequest
+--                                       , responseHeaders)
 import           Network.HTTP.Types (hContentLength)
 import           Options.Applicative
 import           OsmAnd
@@ -59,27 +68,25 @@ osmand (OptArgs d p f) = do
 
   case w of
     (osmAndContent, osmAndXmlTree) -> do
-      osmAndContentToXmlFIle (d ++ "/osmand.xml") osmAndXmlTree
+      osmAndContentToXmlFIle (d ++ "/indexes.xml") osmAndXmlTree
       osmAndContent >>= mapM (\oaContent -> do
                                  let prefixdwl = case (osmAndContentRoot oaContent) of
                                        "region" -> "/download.php?standard=yes&file="
                                        "road_region" -> "/road-indexes/"
                                        "srtmcountry" -> "/srtm-countries/"
                                        p -> "/" ++ p ++ "/"
-                                 withManager $ \manager -> displayConsoleRegions $ do
-                                   -- Start the request
-                                   req <- parseUrl ("http://download.osmand.net" ++ prefixdwl ++ (osmAndContentName oaContent))
-                                   res <- http req manager
-                                   -- Get the Content-Length and initialize the progress bar
-                                   let Just cl = lookup hContentLength (responseHeaders res)
-                                   pg <- liftIO $ newProgressBar def { pgTotal = read (ByteString.unpack cl)
-                                                                     , pgWidth = 100
-                                                                     , pgOnCompletion = Just $ "Download " ++ (osmAndContentName oaContent) ++ " done"
-                                                                     }
-                                   -- Consume the response updating the progress bar
-                                   responseBody res $=+ updateProgress pg $$+- sinkNull
-                                   -- Force the progress bar to complete
-                                   liftIO $ complete pg
+                                 displayConsoleRegions $ do
+                                     req <- parseRequest ("http://download.osmand.net" ++ prefixdwl ++ (osmAndContentName oaContent))
+                                     manager <- newManager tlsManagerSettings
+                                     runResourceT $ do
+                                       res <- http req manager
+                                       let Just cl = lookup hContentLength (responseHeaders res)
+                                       pg <- liftIO $ newProgressBar def { pgTotal = read (ByteString.unpack cl)
+                                                                         , pgWidth = 100
+                                                                         , pgOnCompletion = Just $ "Download " ++ (osmAndContentName oaContent) ++ " done"
+                                                                         }
+                                       runConduit $ responseBody res .| updateProgress pg .| sinkFile (d ++ "/" ++ (osmAndContentName oaContent))
+                                       liftIO $ complete pg
                              )
 
   return ()
