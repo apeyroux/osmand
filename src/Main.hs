@@ -58,6 +58,7 @@ updateProgress pg = await >>= maybe (return ()) (\chunk -> do
 
 osmand :: OptArgs -> IO ()
 osmand (OptArgs d ph pp f) = do
+
   let proxy = case (ph, pp) of
                 (Just h, Just p) -> (ph <> Just ":" <> (show <$> pp))
                 _ -> Nothing
@@ -115,6 +116,6 @@ main = do
   osmand =<< execParser opts  
   where
     opts = info (optArgs <**> helper)
-      ( fullDesc
-        <> progDesc "OsmAnd mirror"
-        <> header "osmand - mirror OsmAnd" )
+      (fullDesc
+        <> progDesc ("OsmAnd mirror " ++ version)
+        <> header ("osmand - " ++ version))

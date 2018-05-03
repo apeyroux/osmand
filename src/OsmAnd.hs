@@ -10,6 +10,7 @@ module OsmAnd (
   , osmAndContentToXmlFIle
   , osmAndContentToXml
   , execOsmAnd
+  , version
   ) where
 
 import Control.Monad.Writer
@@ -83,6 +84,9 @@ instance Read OsmAndType where
             if (take (length attempt) value) == attempt
             then [(result, drop (length attempt) value)]
             else tryParse xs
+
+version :: String
+version = "v1.0"
 
 -- get_indexes?xml
 basews :: String
