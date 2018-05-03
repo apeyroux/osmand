@@ -1,0 +1,135 @@
+#! /usr/bin/env python
+
+#! /usr/bin/env nix-shell
+#! nix-shell -i python -p python pythonPackages.lxml pythonPackages.clint pythonPackages.requests pythonPackages.argparse
+import errno
+from lxml import etree
+from shutil import copyfile
+from clint.textui import progress
+
+import requests
+import os.path
+import string
+import click
+import sys
+
+# URL index http://download.osmand.net/get_indexes?gzip
+
+INDEXES = "http://download.osmand.net/get_indexes?xml"
+DOWNLOAD = "http://download.osmand.net"
+BASEDIR = "www"
+
+
+@click.command()
+@click.option('--destination', '-d', help='Destination path', required=True, default=BASEDIR)
+@click.option('--debug', is_flag=True, help='Debug')
+@click.option('--proxy', help='Proxy HTTP/HTTPS', default=None)
+@click.pass_context
+def mirror(ctx, destination, debug, proxy):
+
+    proxies = lambda: {'http': proxy, 'https': proxy} if proxy else {}
+
+    initBaseDir(destination)
+
+    try:
+        rindexes = requests.get(INDEXES, proxies=proxies())
+    except Exception as ex:
+        click.secho("ERROR: {}".format(ex), bg="red", fg="white")
+        exit(0)
+
+    if 200 == rindexes.status_code:
+        tree = etree.fromstring(rindexes.text)
+
+        # rm strm
+        for strm in tree.xpath("//srtmcountry"):
+            tree.remove(strm)
+
+        for xdoc in tree.xpath("/osmand_regions/*"):
+            # check dwl only fr & world
+            if ("France" not in xdoc.get('name')) \
+                    and ("Guyana") not in xdoc.get('name') \
+                    and ("Spain") not in xdoc.get('name') \
+                    and ("Gb_england") not in xdoc.get('name') \
+                    and ("French") not in xdoc.get('name') \
+                    and ("guiana") not in xdoc.get('name') \
+                    and ("Italy") not in xdoc.get('name') \
+                    and ("Germany") not in xdoc.get('name') \
+                    and ("Belgium") not in xdoc.get('name') \
+                    and ("Switzerland") not in xdoc.get('name') \
+                    and ("Luxembourg") not in xdoc.get('name') \
+                    and ("Martinique") not in xdoc.get('name') \
+                    and ("Guadeloupe") not in xdoc.get('name') \
+                    and ("Oceania") not in xdoc.get('name') \
+                    and ("Reunion") not in xdoc.get('name') \
+                    and ("Saint-pierre") not in xdoc.get('name') \
+                    and ("Mayotte") not in xdoc.get('name') \
+                    and ("French-southern-and-antarctic") not in xdoc.get('name') \
+                    and ("World" not in xdoc.get('name')):
+                if debug:
+                    click.secho(
+                        "- skip : {}".format(xdoc.get('name')), bg="orange", fg="white")
+                # rm no fr in xml config
+                xdoc.getparent().remove(xdoc)
+                continue
+
+            # verifier que le fichier isexist en local
+            if not os.path.isfile("{}/{}".format(destination, xdoc.get('name'))):
+                dwlFromXDoc('NEW', xdoc, destination, proxies())
+                continue
+
+            # verifier que la taille du fichier local == distant
+            if int(xdoc.get('containerSize')) != int(os.stat("{}/{}".format(destination, xdoc.get('name'))).st_size):
+                dwlFromXDoc('UPDATE', xdoc, destination, proxies())
+                continue
+
+        # update de l'index courant
+        f = open("%s/indexes.xml" % destination, 'wb')
+        f.write(etree.tostring(tree, pretty_print=True, xml_declaration=True))
+        f.close()
+
+
+def xdoc2url(typedwl, xdoc):
+    if (typedwl == 'region'):
+        return "%s/download.php?standard=yes&file=%s" % (DOWNLOAD, xdoc.get('name'))
+    if (typedwl == 'road_region'):
+        return "%s/%s/%s" % (DOWNLOAD, "road-indexes", xdoc.get('name'))
+    else:
+        return "%s/%s/%s" % (DOWNLOAD, typedwl, xdoc.get('name'))
+
+
+def dwlFromXDoc(msg, xdoc, destination, proxies):
+    typedwl = xdoc.tag
+    click.secho("[{}:{}] {} ...".format(
+        msg, typedwl.upper(), xdoc.get('description')), bg="green", fg="white")
+
+    try:
+        robf = requests.get(
+            xdoc2url(typedwl, xdoc), stream=True, proxies=proxies)
+    except Exception as ex:
+        click.secho("ERR: {}".format(ex), bg="red", fg="white")
+        exit(0)
+
+    if 200 == robf.status_code:
+        with open("%s/%s" % (destination, xdoc.get('name')), 'wb') as f:
+            total_length = int(robf.headers.get('content-length'))
+            for chunk in progress.bar(robf.iter_content(chunk_size=1024), expected_size=(total_length / 1024) + 1):
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
+    else:
+        click.secho(
+            "[{}:{}] err http {}".format(msg, typedwl.upper(), robf.status_code), bg="red", fg="white")
+
+
+def initBaseDir(destination=BASEDIR):
+    if(not os.path.isdir(destination)):
+        try:
+            os.makedirs(destination)
+        except OSError as ex:
+            if ex.errno == errno.EEXIST and os.path.isdir(destination):
+                pass
+            else:
+                raise
+
+if __name__ == '__main__':
+    sys.exit(mirror())
