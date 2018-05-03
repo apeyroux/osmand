@@ -47,7 +47,7 @@ optArgs = OptArgs
   <$> strOption (long "destination" <> short 'd' <> help "mirror destination")
   <*> (optional $ strOption $ long "proxy-host" <> help "proxy host")
   <*> (optional $ option auto $ long "proxy-port" <> help "proxy port")
-  <*> (optional $ many $ strOption $ long "filters" <> short 'f' <> help "filters")
+  <*> (optional $ many $ strOption $ long "filter" <> short 'f' <> help "filter")
 
 updateProgress :: MonadIO m => ProgressBar -> ConduitM ByteString ByteString m ()
 updateProgress pg = await >>= maybe (return ()) (\chunk -> do
