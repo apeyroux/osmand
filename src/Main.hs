@@ -11,15 +11,11 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as ByteString (length)
 import           Data.ByteString.Char8 as ByteString (unpack, pack)
 import           Data.Conduit (ConduitM
-                              , Sink
+                              , (.|)
                               , await
                               , yield
-                              , runConduit
-                              , (.|)
-                              , ($$+-)
-                              , ($=+))
+                              , runConduit)
 import           Data.Conduit.Combinators (sinkFile)
-import           Data.Monoid
 import           Network.HTTP.Conduit
 import           Network.HTTP.Types (hContentLength)
 import           Options.Applicative
@@ -51,15 +47,15 @@ updateProgress pg = await >>= maybe (return ()) (\chunk -> do
 osmand :: OptArgs -> IO ()
 osmand (OptArgs d ph pp f) = do
 
-  fileExist <- doesFileExist d
-  case fileExist of
+  targetDirExist <- doesFileExist d
+  case targetDirExist of
     True -> return ()
     False -> createDirectoryIfMissing True d
 
-  let proxy = case (ph, pp) of
-                (Just h, Just p) -> (ph <> Just ":" <> (show <$> pp))
-                _ -> Nothing
-  osmAndIndexes <- runReader parseOsmAndIndexes proxy
+  let proxyCfg = case (ph, pp) of
+                   (Just _, Just _) -> (ph <> Just ":" <> (show <$> pp))
+                   _ -> Nothing
+  osmAndIndexes <- runReader parseOsmAndIndexes proxyCfg
   w <- execOsmAnd (ctx osmAndIndexes f) $ do
     osmAndContentFromXml Voice -- voice
       >> osmAndContentFromXml Map -- map 
@@ -71,13 +67,13 @@ osmand (OptArgs d ph pp f) = do
       >> osmAndContentFromXml SrtmMap -- srtm_map
       >> osmAndContentFromXml Hillshade -- hillshade
 
-  case w of
+  _ <- case w of
     (osmAndContent, osmAndXmlTree) -> do
       osmAndContentToXmlFIle (d ++ "/indexes.xml") osmAndXmlTree
       osmAndContent >>= (\lo -> do
                             liftIO $ filterM (\o -> do
-                                                 fileExist <- doesFileExist (d ++ "/" ++ (osmAndContentName o))
-                                                 case fileExist of
+                                                 targetExist <- doesFileExist (d ++ "/" ++ (osmAndContentName o))
+                                                 case targetExist of
                                                    True -> do
                                                      fileSize <- getFileSize (d ++ "/" ++ (osmAndContentName o))
                                                      return $ not ((osmAndContentContainerSize o) == fileSize)
@@ -91,9 +87,9 @@ osmand (OptArgs d ph pp f) = do
                                              p -> "/" ++ p ++ "/"
                                        displayConsoleRegions $ do
                                          req <- parseRequest ("http://download.osmand.net" ++ prefixdwl ++ (osmAndContentName oaContent))
-                                         case (ph, pp) of
-                                           (Just h, Just p) -> return $ addProxy (ByteString.pack h) p req
-                                           _ -> return req
+                                         _ <- case (ph, pp) of
+                                                (Just h, Just p) -> return $ addProxy (ByteString.pack h) p req
+                                                _ -> return req
                                          manager <- newManager tlsManagerSettings
                                          runResourceT $ do
                                            res <- http req manager

@@ -15,11 +15,8 @@ module OsmAnd (
 
 import Control.Monad.Writer
 import Control.Monad.Reader
--- import Data.Default.Class
 import Data.Char
 import Data.List
-import Data.Monoid
-import Data.Maybe
 import Text.XML.HXT.Core
 import Text.XML.HXT.HTTP
 
@@ -106,7 +103,7 @@ parseOsmAndIndexes = do
 getOsmAndType :: IOSLA (XIOState ()) XmlTree OsmAndContent
 getOsmAndType = do
   proc l -> do
-    root          <- getName                      -< l
+    rootXml       <- getName                      -< l
     name          <- getAttrValue "name"          -< l
     otype         <- getAttrValue "type"          -< l
     containerSize <- getAttrValue "containerSize" -< l
@@ -116,7 +113,7 @@ getOsmAndType = do
     size          <- getAttrValue "size"          -< l
     targetsize    <- getAttrValue "targetsize"    -< l
     description   <- getAttrValue "description"   -< l
-    returnA -< OsmAndContent { osmAndContentRoot = root
+    returnA -< OsmAndContent { osmAndContentRoot = rootXml
                              , osmAndContentType = read otype::OsmAndType
                              , osmAndContentContainerSize = (read containerSize::Integer)
                              , osmAndContentContentSize = (read contentSize::Integer)
