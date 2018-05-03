@@ -21,14 +21,6 @@ import           Data.Conduit (ConduitM
 import           Data.Conduit.Combinators (sinkFile)
 import           Data.Monoid
 import           Network.HTTP.Conduit
--- import           Network.HTTP.Conduit (http
---                                       , parseUrl
---                                       , responseBody
---                                       , tlsManagerSettings
---                                       , newManager
---                                       , httpLbs
---                                       , parseRequest
---                                       , responseHeaders)
 import           Network.HTTP.Types (hContentLength)
 import           Options.Applicative
 import           OsmAnd

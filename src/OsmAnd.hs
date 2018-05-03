@@ -141,9 +141,10 @@ osmAndContentFromXml o = do
     baseXmlT x = (constL x) //> hasAttrValue "type" ((==) (show o))
     toUpperString s = toUpper <$> s::String
     xmlT ctx = case osmAndContextFilters ctx of
-             Just filters -> baseXmlT (ctxIndexes ctx)
-               >>> hasAttrValue "description" (\d -> elem True (map (\s -> isInfixOf (toUpperString s) (toUpperString d)) filters))
-             Nothing -> baseXmlT (ctxIndexes ctx)
+                 Just [] -> baseXmlT (ctxIndexes ctx)
+                 Just filters -> baseXmlT (ctxIndexes ctx)
+                   >>> hasAttrValue "description" (\d -> elem True (map (\s -> isInfixOf (toUpperString s) (toUpperString d)) filters))
+                 Nothing -> baseXmlT (ctxIndexes ctx)
 
 osmAndBaseXmlDoc :: ArrowXml a => [XmlTree] -> a n XmlTree
 osmAndBaseXmlDoc xtree = root [] [mkelem "osmand_regions" [sattr "mapversion" "1"] [constL xtree]]
