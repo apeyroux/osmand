@@ -88,8 +88,8 @@ instance Read OsmAndType where
 basews :: String
 basews = "http://download.osmand.net"
 
-parseOsmAndIndexes :: IO [XmlTree]
-parseOsmAndIndexes = runX $ readDocument [withHTTP []] (basews <> "/get_indexes?xml")
+parseOsmAndIndexes :: Reader String (IO [XmlTree])
+parseOsmAndIndexes = return $ runX $ readDocument [withHTTP []] (basews <> "/get_indexes?xml")
 
 -- osmAndDescriptionContain :: String -> [XmlTree] -> IO [XmlTree]
 -- osmAndDescriptionContain q xtree = runX $ constL xtree >>> hasAttrValue "description" (\d -> (isInfixOf ((toUpper <$> q)::String) ((toUpper <$> d)::String)))

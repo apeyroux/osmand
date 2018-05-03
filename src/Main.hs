@@ -56,7 +56,7 @@ updateProgress pg = await >>= maybe (return ()) (\chunk -> do
 
 osmand :: OptArgs -> IO ()
 osmand (OptArgs d p f) = do
-  osmAndIndexes <- parseOsmAndIndexes
+  osmAndIndexes <- runReader parseOsmAndIndexes (Just "proxy")
   w <- execOsmAnd (ctx osmAndIndexes f) $ do
     osmAndContentFromXml Voice -- voice
       >> osmAndContentFromXml Map -- map 
