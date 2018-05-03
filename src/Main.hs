@@ -96,7 +96,11 @@ osmand (OptArgs d ph pp f) = do
                                            let Just cl = lookup hContentLength (responseHeaders res)
                                            pg <- liftIO $ newProgressBar def { pgTotal = read (ByteString.unpack cl)
                                                                              , pgWidth = 100
-                                                                             , pgOnCompletion = Just $ "Download " ++ (osmAndContentName oaContent) ++ " done"
+                                                                             , pgPendingChar = '░'
+                                                                             , pgCompletedChar = '█'
+                                                                             , pgFormat = "Working ╢:bar╟ :current/:total :name"
+                                                                             -- , pgFormat = ":current/:total [:bar]"
+                                                                             , pgOnCompletion = Just $ "Download " ++ (osmAndContentName oaContent) ++ " done :percent after :elapsed seconds"
                                                                              }
                                            runConduit $ responseBody res .| updateProgress pg .| sinkFile (d ++ "/" ++ (osmAndContentName oaContent))
                                            liftIO $ complete pg
