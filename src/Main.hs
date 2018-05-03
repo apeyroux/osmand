@@ -8,11 +8,20 @@ import Data.Monoid
 import Options.Applicative
 import OsmAnd
 
-main :: IO ()
-main = do
+data OptArgs = OptArgs {
+  optArgsDestination :: String
+  , optArgsFilters :: Maybe [String]
+  }
 
+optArgs :: Parser OptArgs
+optArgs = OptArgs
+  <$> strOption (long "destination" <> short 'd' <> help "mirror destination")
+  <*> (optional $ many $ strOption $ long "filters" <> short 'f')
+
+osmand :: OptArgs -> IO ()
+osmand (OptArgs d f) = do
   osmAndIndexes <- parseOsmAndIndexes
-  w <- execOsmAnd (ctx osmAndIndexes) $ do
+  w <- execOsmAnd (ctx osmAndIndexes f) $ do
     osmAndContentFromXml Voice -- voice
       >> osmAndContentFromXml Map -- map 
       >> osmAndContentFromXml (read "wikimap"::OsmAndType) -- wikimap
@@ -25,13 +34,18 @@ main = do
 
   case w of
     (osmAndContent, osmAndXmlTree) -> do
-      osmAndContentToXmlFIle "/tmp/osmand.xml" osmAndXmlTree
+      osmAndContentToXmlFIle (d ++ "/osmand.xml") osmAndXmlTree
       osmAndContent >>= mapM (print . osmAndContentName)
 
   return ()
-  
   where
-    filters = ["french"
-              , "france"
-              , "World"]
-    ctx idx = OsmAndContext Nothing idx (Just filters)
+    ctx idx filters = OsmAndContext Nothing idx filters
+
+main :: IO ()
+main = do
+  osmand =<< execParser opts  
+  where
+    opts = info (optArgs <**> helper)
+      ( fullDesc
+        <> progDesc "OsmAnd mirror"
+        <> header "osmand - mirror OsmAnd" )
