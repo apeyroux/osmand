@@ -4,6 +4,7 @@
 module Main where
 
 import           Control.Monad.Reader
+import           Control.Monad.Trans.Resource (runResourceT)
 import           Control.Monad.Writer
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as ByteString (length)
@@ -17,7 +18,6 @@ import           Data.Conduit (ConduitM
                               , ($$+-)
                               , ($=+))
 import           Data.Conduit.Combinators (sinkFile)
-import Control.Monad.Trans.Resource (runResourceT)
 import           Data.Monoid
 import           Network.HTTP.Conduit
 -- import           Network.HTTP.Conduit (http
@@ -32,6 +32,7 @@ import           Network.HTTP.Types (hContentLength)
 import           Options.Applicative
 import           OsmAnd
 import           System.Console.AsciiProgress
+import           System.Directory
 
 data OptArgs = OptArgs {
   optArgsDestination :: String
@@ -69,24 +70,30 @@ osmand (OptArgs d p f) = do
   case w of
     (osmAndContent, osmAndXmlTree) -> do
       osmAndContentToXmlFIle (d ++ "/indexes.xml") osmAndXmlTree
-      osmAndContent >>= mapM (\oaContent -> do
-                                 let prefixdwl = case (osmAndContentRoot oaContent) of
-                                       "region" -> "/download.php?standard=yes&file="
-                                       "road_region" -> "/road-indexes/"
-                                       "srtmcountry" -> "/srtm-countries/"
-                                       p -> "/" ++ p ++ "/"
-                                 displayConsoleRegions $ do
-                                     req <- parseRequest ("http://download.osmand.net" ++ prefixdwl ++ (osmAndContentName oaContent))
-                                     manager <- newManager tlsManagerSettings
-                                     runResourceT $ do
-                                       res <- http req manager
-                                       let Just cl = lookup hContentLength (responseHeaders res)
-                                       pg <- liftIO $ newProgressBar def { pgTotal = read (ByteString.unpack cl)
-                                                                         , pgWidth = 100
-                                                                         , pgOnCompletion = Just $ "Download " ++ (osmAndContentName oaContent) ++ " done"
-                                                                         }
-                                       runConduit $ responseBody res .| updateProgress pg .| sinkFile (d ++ "/" ++ (osmAndContentName oaContent))
-                                       liftIO $ complete pg
+      osmAndContent >>= (\lo -> do
+
+                            -- todo: filter avec
+                            -- fileExist <- doesFileExist (d ++ "/" ++ (osmAndContentName lo))
+                            -- fileSize <- getFileSize (d ++ "/" ++ (osmAndContentName lo))
+                            
+                            return lo) >>= mapM (\oaContent -> do
+                                           let prefixdwl = case (osmAndContentRoot oaContent) of
+                                                 "region" -> "/download.php?standard=yes&file="
+                                                 "road_region" -> "/road-indexes/"
+                                                 "srtmcountry" -> "/srtm-countries/"
+                                                 p -> "/" ++ p ++ "/"
+                                           displayConsoleRegions $ do
+                                             req <- parseRequest ("http://download.osmand.net" ++ prefixdwl ++ (osmAndContentName oaContent))
+                                             manager <- newManager tlsManagerSettings
+                                             runResourceT $ do
+                                               res <- http req manager
+                                               let Just cl = lookup hContentLength (responseHeaders res)
+                                               pg <- liftIO $ newProgressBar def { pgTotal = read (ByteString.unpack cl)
+                                                                                 , pgWidth = 100
+                                                                                 , pgOnCompletion = Just $ "Download " ++ (osmAndContentName oaContent) ++ " done"
+                                                                                 }
+                                               runConduit $ responseBody res .| updateProgress pg .| sinkFile (d ++ "/" ++ (osmAndContentName oaContent))
+                                               liftIO $ complete pg
                              )
 
   return ()
