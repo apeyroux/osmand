@@ -3,6 +3,7 @@
 
 module Main where
 
+import           Control.Monad (filterM)
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Resource (runResourceT)
 import           Control.Monad.Writer
@@ -71,12 +72,15 @@ osmand (OptArgs d p f) = do
     (osmAndContent, osmAndXmlTree) -> do
       osmAndContentToXmlFIle (d ++ "/indexes.xml") osmAndXmlTree
       osmAndContent >>= (\lo -> do
-
-                            -- todo: filter avec
-                            -- fileExist <- doesFileExist (d ++ "/" ++ (osmAndContentName lo))
-                            -- fileSize <- getFileSize (d ++ "/" ++ (osmAndContentName lo))
-                            
-                            return lo) >>= mapM (\oaContent -> do
+                            liftIO $ filterM (\o -> do
+                                        fileExist <- doesFileExist (d ++ "/" ++ (osmAndContentName o))
+                                        if fileExist then do
+                                          fileSize <- getFileSize (d ++ "/" ++ (osmAndContentName o))
+                                          return $ not ((osmAndContentContainerSize o) == fileSize)
+                                        else
+                                          return False
+                                    ) lo
+                        ) >>= mapM (\oaContent -> do
                                            let prefixdwl = case (osmAndContentRoot oaContent) of
                                                  "region" -> "/download.php?standard=yes&file="
                                                  "road_region" -> "/road-indexes/"
