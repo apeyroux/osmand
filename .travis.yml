@@ -1,1 +1,2 @@
 language: nix
+script: nix-build -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/master.tar.gz
