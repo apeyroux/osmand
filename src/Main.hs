@@ -2,9 +2,10 @@
 
 module Main where
 
-import Data.Monoid
-import Control.Monad.Writer
 import Control.Monad.Reader
+import Control.Monad.Writer
+import Data.Monoid
+import Options.Applicative
 import OsmAnd
 
 main :: IO ()
