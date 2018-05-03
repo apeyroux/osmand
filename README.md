@@ -1,4 +1,8 @@
+[![Build Status](https://travis-ci.org/apeyroux/osmand.svg?branch=master)](https://travis-ci.org/apeyroux/osmand)
+
 # Help
+
+Mirror of http://download.osmand.net/indexes.php?xml
 
 ``` shell
 docker run -it --rm apeyroux/osmand -h
@@ -12,7 +16,7 @@ Available options:
   -d,--destination ARG     mirror destination
   --proxy-host ARG         proxy host
   --proxy-port ARG         proxy port
-  -f,--filters ARG         filters
+  -f,--filter ARG          filter
   -h,--help                Show this help text`
 ```
 
