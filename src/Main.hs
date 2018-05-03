@@ -77,10 +77,11 @@ osmand (OptArgs d ph pp f) = do
       osmAndContent >>= (\lo -> do
                             liftIO $ filterM (\o -> do
                                                  fileExist <- doesFileExist (d ++ "/" ++ (osmAndContentName o))
-                                                 if fileExist then do
-                                                   fileSize <- getFileSize (d ++ "/" ++ (osmAndContentName o))
-                                                   return $ not ((osmAndContentContainerSize o) == fileSize)
-                                                   else return True
+                                                 case fileExist of
+                                                   True -> do
+                                                     fileSize <- getFileSize (d ++ "/" ++ (osmAndContentName o))
+                                                     return $ not ((osmAndContentContainerSize o) == fileSize)
+                                                   False -> return True
                                              ) lo
                         ) >>= mapM (\oaContent -> do
                                        let prefixdwl = case (osmAndContentRoot oaContent) of
