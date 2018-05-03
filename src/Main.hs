@@ -51,6 +51,11 @@ updateProgress pg = await >>= maybe (return ()) (\chunk -> do
 osmand :: OptArgs -> IO ()
 osmand (OptArgs d ph pp f) = do
 
+  fileExist <- doesFileExist d
+  case fileExist of
+    True -> return ()
+    False -> createDirectoryIfMissing True d
+
   let proxy = case (ph, pp) of
                 (Just h, Just p) -> (ph <> Just ":" <> (show <$> pp))
                 _ -> Nothing
