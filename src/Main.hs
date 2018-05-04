@@ -87,12 +87,12 @@ osmand (OptArgs d ph pp f) = do
                                              p -> "/" ++ p ++ "/"
                                        displayConsoleRegions $ do
                                          req <- parseRequest ("http://download.osmand.net" ++ prefixdwl ++ (osmAndContentName oaContent))
-                                         _ <- case (ph, pp) of
-                                                (Just h, Just p) -> return $ addProxy (ByteString.pack h) p req
-                                                _ -> return req
+                                         req' <- case (ph, pp) of
+                                                   (Just h, Just p) -> return $ addProxy (ByteString.pack h) p req
+                                                   _ -> return req
                                          manager <- newManager tlsManagerSettings
                                          runResourceT $ do
-                                           res <- http req manager
+                                           res <- http req' manager
                                            let Just cl = lookup hContentLength (responseHeaders res)
                                            pg <- liftIO $ newProgressBar def { pgTotal = read (ByteString.unpack cl)
                                                                              , pgWidth = 100
