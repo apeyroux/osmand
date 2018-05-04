@@ -6,11 +6,11 @@ Mirror of http://download.osmand.net/indexes.php?xml
 
 ``` shell
 docker run -it --rm apeyroux/osmand -h
-osmand - v1.0
+osmand - v1.2
 
 Usage: osmand (-d|--destination ARG) [--proxy-host ARG] [--proxy-port ARG]
               [-f|--filters ARG]
-  OsmAnd mirror v1.0
+  OsmAnd mirror v1.2
 
 Available options:
   -d,--destination ARG     mirror destination

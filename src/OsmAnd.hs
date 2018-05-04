@@ -83,7 +83,7 @@ instance Read OsmAndType where
             else tryParse xs
 
 version :: String
-version = "v1.1"
+version = "v1.2"
 
 -- get_indexes?xml
 basews :: String
