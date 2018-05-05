@@ -22,6 +22,7 @@ import           Options.Applicative
 import           OsmAnd
 import           System.Console.AsciiProgress
 import           System.Directory
+import           System.FilePath.Posix
 
 data OptArgs = OptArgs {
   optArgsDestination :: String
@@ -72,10 +73,10 @@ osmand (OptArgs d ph pp f) = do
       osmAndContentToXmlFIle (d ++ "/indexes.xml") osmAndXmlTree
       osmAndContent >>= (\lo -> do
                             liftIO $ filterM (\o -> do
-                                                 targetExist <- doesFileExist (d ++ "/" ++ (osmAndContentName o))
+                                                 targetExist <- doesFileExist (d </> (osmAndContentName o))
                                                  case targetExist of
                                                    True -> do
-                                                     fileSize <- getFileSize (d ++ "/" ++ (osmAndContentName o))
+                                                     fileSize <- getFileSize (d </> (osmAndContentName o))
                                                      return $ not ((osmAndContentContainerSize o) == fileSize)
                                                    False -> return True
                                              ) lo
@@ -102,7 +103,7 @@ osmand (OptArgs d ph pp f) = do
                                                                              -- , pgFormat = ":current/:total [:bar]"
                                                                              , pgOnCompletion = Just $ "Download " ++ (osmAndContentName oaContent) ++ " done :percent after :elapsed seconds"
                                                                              }
-                                           runConduit $ responseBody res .| updateProgress pg .| sinkFile (d ++ "/" ++ (osmAndContentName oaContent))
+                                           runConduit $ responseBody res .| updateProgress pg .| sinkFile (d </> (osmAndContentName oaContent))
                                            liftIO $ complete pg
                                    )
   return ()

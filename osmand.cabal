@@ -28,6 +28,7 @@ library
                      , hxt-http
                      , mtl
                      , data-default
+                     , directory
                      
 executable osmand
   main-is:             Main.hs

@@ -13,8 +13,8 @@ module OsmAnd (
   , version
   ) where
 
-import Control.Monad.Writer
 import Control.Monad.Reader
+import Control.Monad.Writer
 import Data.Char
 import Data.List
 import Text.XML.HXT.Core
