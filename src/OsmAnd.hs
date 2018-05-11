@@ -17,6 +17,7 @@ import Control.Monad.Reader
 import Control.Monad.Writer
 import Data.Char
 import Data.List
+import Data.Version
 import Text.XML.HXT.Core
 import Text.XML.HXT.HTTP
 
@@ -82,8 +83,8 @@ instance Read OsmAndType where
             then [(result, drop (length attempt) value)]
             else tryParse xs
 
-version :: String
-version = "v1.2"
+version :: Version
+version = makeVersion [1, 2, 0]
 
 -- get_indexes?xml
 basews :: String

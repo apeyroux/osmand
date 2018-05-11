@@ -18,6 +18,7 @@ import           Data.Conduit (ConduitM
                               , yield
                               , runConduit)
 import           Data.Conduit.Combinators (sinkFile)
+import           Data.Version
 import           Development.GitRev
 import           Network.HTTP.Conduit
 import           Network.HTTP.Types (hContentLength)
@@ -114,5 +115,5 @@ main = do
   where
     opts = info (optArgs <**> helper)
       (fullDesc
-        <> progDesc ("OsmAnd mirror " ++ version ++ " " ++ $(gitBranch) ++ " " ++ $(gitHash))
-        <> header ("osmand - " ++ version))
+        <> progDesc ("OsmAnd mirror " ++ (showVersion version) ++ " " ++ $(gitBranch) ++ " " ++ $(gitHash))
+        <> header ("osmand - " ++ (showVersion version)))
