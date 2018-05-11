@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
 
 module Main where
@@ -17,6 +18,7 @@ import           Data.Conduit (ConduitM
                               , yield
                               , runConduit)
 import           Data.Conduit.Combinators (sinkFile)
+import           Development.GitRev
 import           Network.HTTP.Conduit
 import           Network.HTTP.Types (hContentLength)
 import           Options.Applicative
@@ -112,5 +114,5 @@ main = do
   where
     opts = info (optArgs <**> helper)
       (fullDesc
-        <> progDesc ("OsmAnd mirror " ++ version)
+        <> progDesc ("OsmAnd mirror " ++ version ++ " " ++ $(gitBranch) ++ " " ++ $(gitHash))
         <> header ("osmand - " ++ version))

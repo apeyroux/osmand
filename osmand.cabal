@@ -45,6 +45,7 @@ executable osmand
                      , conduit
                      , http-conduit
                      , http-types
+                     , gitrev
                      , resourcet
                      , directory
                      , filepath
