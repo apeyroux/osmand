@@ -3,6 +3,7 @@
 
 module Main where
 
+import qualified Control.Exception as E
 import           Control.Monad (filterM)
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Resource (runResourceT)
@@ -57,16 +58,15 @@ osmand (OptArgs d ph pp f) = do
                    (Just _, Just _) -> (ph <> Just ":" <> (show <$> pp))
                    _ -> Nothing
   osmAndIndexes <- runReader parseOsmAndIndexes proxyCfg
-  w <- execOsmAnd (ctx osmAndIndexes f) $ do
-    osmAndContentFromXml Voice -- voice
-      >> osmAndContentFromXml Map -- map 
-      >> osmAndContentFromXml (read "wikimap"::OsmAndType) -- wikimap
-      >> osmAndContentFromXml Fonts -- fonts
-      >> osmAndContentFromXml Depth -- depth
-      >> osmAndContentFromXml WikiVoyage -- wikivoyage
-      >> osmAndContentFromXml RoadMap -- road_map
-      >> osmAndContentFromXml SrtmMap -- srtm_map
-      >> osmAndContentFromXml Hillshade -- hillshade
+  w <- execOsmAnd (ctx osmAndIndexes f) $ osmAndContentFromXml Voice -- voice
+       >> osmAndContentFromXml Map -- map 
+       >> osmAndContentFromXml (read "wikimap"::OsmAndType) -- wikimap
+       >> osmAndContentFromXml Fonts -- fonts
+       >> osmAndContentFromXml Depth -- depth
+       >> osmAndContentFromXml WikiVoyage -- wikivoyage
+       >> osmAndContentFromXml RoadMap -- road_map
+       >> osmAndContentFromXml SrtmMap -- srtm_map
+       >> osmAndContentFromXml Hillshade -- hillshade
 
   _ <- case w of
     (osmAndContent, osmAndXmlTree) -> do
@@ -97,10 +97,6 @@ osmand (OptArgs d ph pp f) = do
                                            let Just cl = lookup hContentLength (responseHeaders res)
                                            pg <- liftIO $ newProgressBar def { pgTotal = read (ByteString.unpack cl)
                                                                              , pgWidth = 100
-                                                                             -- , pgPendingChar = '░'
-                                                                             -- , pgCompletedChar = '█'
-                                                                             -- , pgFormat = "Working ╢:bar╟ :current/:total :name"
-                                                                             -- , pgFormat = ":current/:total [:bar]"
                                                                              , pgOnCompletion = Just $ "Download " ++ (osmAndContentName oaContent) ++ " done :percent after :elapsed seconds"
                                                                              }
                                            runConduit $ responseBody res .| updateProgress pg .| sinkFile (d </> (osmAndContentName oaContent))
