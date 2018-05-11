@@ -4,7 +4,6 @@
 
 module Main where
 
-import qualified Control.Exception as E
 import           Control.Monad (filterM)
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Resource (runResourceT)
@@ -15,6 +14,7 @@ import           Data.ByteString.Char8 as ByteString (unpack, pack)
 import           Data.Conduit (ConduitM
                               , (.|)
                               , await
+                              , catchC
                               , yield
                               , runConduit)
 import           Data.Conduit.Combinators (sinkFile)
