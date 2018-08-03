@@ -7,14 +7,12 @@ module Main where
 import           Control.Monad (filterM)
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Resource (runResourceT)
-import           Control.Monad.Writer
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as ByteString (length)
 import           Data.ByteString.Char8 as ByteString (unpack, pack)
 import           Data.Conduit (ConduitM
                               , (.|)
                               , await
-                              , catchC
                               , yield
                               , runConduit)
 import           Data.Conduit.Combinators (sinkFile)
@@ -74,16 +72,14 @@ osmand (OptArgs d ph pp f) = do
   _ <- case w of
     (osmAndContent, osmAndXmlTree) -> do
       osmAndContentToXmlFIle (d ++ "/indexes.xml") osmAndXmlTree
-      osmAndContent >>= (\lo -> do
-                            liftIO $ filterM (\o -> do
-                                                 targetExist <- doesFileExist (d </> (osmAndContentName o))
-                                                 case targetExist of
-                                                   True -> do
-                                                     fileSize <- getFileSize (d </> (osmAndContentName o))
-                                                     return $ not ((osmAndContentContainerSize o) == fileSize)
-                                                   False -> return True
-                                             ) lo
-                        ) >>= mapM (\oaContent -> do
+      osmAndContent >>= liftIO . filterM (\o -> do
+                                                          targetExist <- doesFileExist (d </> (osmAndContentName o))
+                                                          case targetExist of
+                                                            True -> do
+                                                              fileSize <- getFileSize (d </> (osmAndContentName o))
+                                                              return $ osmAndContentContainerSize o /= fileSize
+                                                            False -> return True)
+                    >>= mapM (\oaContent -> do
                                        let prefixdwl = case (osmAndContentRoot oaContent) of
                                              "region" -> "/download.php?standard=yes&file="
                                              "road_region" -> "/road-indexes/"
@@ -110,10 +106,9 @@ osmand (OptArgs d ph pp f) = do
     ctx idx filters = OsmAndContext Nothing idx filters
 
 main :: IO ()
-main = do
-  osmand =<< execParser opts  
+main = osmand =<< execParser opts
   where
     opts = info (optArgs <**> helper)
       (fullDesc
-        <> progDesc ("OsmAnd mirror " ++ (showVersion version) ++ " " ++ $(gitBranch) ++ " " ++ $(gitHash))
-        <> header ("osmand - " ++ (showVersion version)))
+        <> progDesc ("OsmAnd mirror " ++ showVersion version ++ " " ++ $(gitBranch) ++ " " ++ $(gitHash))
+        <> header ("osmand - " ++ showVersion version))
