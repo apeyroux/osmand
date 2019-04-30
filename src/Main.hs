@@ -92,13 +92,15 @@ osmand (OptArgs d ph pp f) = do
                                          manager <- newManager tlsManagerSettings
                                          runResourceT $ do
                                            res <- http req' manager
-                                           let Just cl = lookup hContentLength (responseHeaders res)
-                                           pg <- liftIO $ newProgressBar def { pgTotal = read (ByteString.unpack cl)
-                                                                             , pgWidth = 100
-                                                                             , pgOnCompletion = Just $ "Download " ++ (osmAndContentName oaContent) ++ " done :percent after :elapsed seconds"
-                                                                             }
-                                           runConduit $ responseBody res .| updateProgress pg .| sinkFile (d </> (osmAndContentName oaContent))
-                                           liftIO $ complete pg
+                                           case lookup hContentLength (responseHeaders res) of
+                                             Just cl -> do
+                                               pg <- liftIO $ newProgressBar def { pgTotal = read (ByteString.unpack cl)
+                                                                                 , pgWidth = 100
+                                                                                 , pgOnCompletion = Just $ "Download " ++ (osmAndContentName oaContent) ++ " done :percent after :elapsed seconds"
+                                                                                 }
+                                               runConduit $ responseBody res .| updateProgress pg .| sinkFile (d </> (osmAndContentName oaContent))
+                                               liftIO $ complete pg
+                                             Nothing -> liftIO $ putStrLn "Can't fetch hContentLength"
                                    )
   return ()
   where
