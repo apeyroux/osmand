@@ -1,3 +1,10 @@
-(import <nixpkgs> {}).haskellPackages.developPackage { root = ./.; } # nix-build -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/master.tar.gz
-# { pkgs ? import /home/alex/src/nixpkgs {} }:
-# (import /home/alex/src/nixpkgs {}).haskell.packages.ghc841.developPackage { root = ./.; }
+with import <nixpkgs> {};
+
+let
+  drv = (haskellPackages.override {
+   overrides = self: super: rec {
+   };
+  }).callCabal2nix "osmand" ./. {};
+in if lib.inNixShell then drv.env.overrideAttrs (old: {
+  buildInputs = old.buildInputs ++ [ haskellPackages.ghcid cabal-install ];
+}) else drv
