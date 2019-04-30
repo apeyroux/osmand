@@ -100,7 +100,9 @@ osmand (OptArgs d ph pp f) = do
                                                                                  }
                                                runConduit $ responseBody res .| updateProgress pg .| sinkFile (d </> (osmAndContentName oaContent))
                                                liftIO $ complete pg
-                                             Nothing -> liftIO $ putStrLn "Can't fetch hContentLength"
+                                             Nothing -> do
+                                               liftIO $ print res
+                                               liftIO $ putStrLn "Can't fetch hContentLength"
                                    )
   return ()
   where
