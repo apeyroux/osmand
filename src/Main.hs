@@ -49,7 +49,6 @@ updateProgress pg = await >>= maybe (return ()) (\chunk -> do
 
 osmand :: OptArgs -> IO ()
 osmand (OptArgs d ph pp f) = do
-
   targetDirExist <- doesFileExist d
   case targetDirExist of
     True -> return ()
