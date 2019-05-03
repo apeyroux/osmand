@@ -1,5 +1,5 @@
 name:                osmand
-version:             1.2.0
+version:             1.3.0
 synopsis:            OsmAnd Mirror
 description:         OsmAnd Mirror API
 license:             BSD3
@@ -35,6 +35,7 @@ executable osmand
   main-is:             Main.hs
   ghc-options:         -Wall
   build-depends:       base
+                     , async
                      , osmand
                      , text
                      , hxt

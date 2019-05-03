@@ -4,6 +4,7 @@
 
 module Main where
 
+import           Control.Concurrent.Async
 import           Control.Monad (filterM)
 import           Control.Monad.Reader
 import           Control.Monad.Trans.Resource (runResourceT)
@@ -72,28 +73,31 @@ osmand (OptArgs d ph pp f) = do
     (osmAndContent, osmAndXmlTree) -> do
       osmAndContentToXmlFIle (d ++ "/indexes.xml") osmAndXmlTree
       osmAndContent >>= liftIO . filterM (\o -> do
-                                                          targetExist <- doesFileExist (d </> (osmAndContentName o))
-                                                          case targetExist of
-                                                            True -> do
-                                                              fileSize <- getFileSize (d </> (osmAndContentName o))
-                                                              return $ osmAndContentContainerSize o /= fileSize
-                                                            False -> return True)
-                    >>= mapM (\oaContent -> do
+                                             targetExist <- doesFileExist (d </> osmAndContentName o)
+                                             case targetExist of
+                                               True -> do
+                                                 fileSize <- getFileSize (d </> osmAndContentName o)
+                                                 return $ osmAndContentContainerSize o /= fileSize
+                                               False -> return True)
+                    >>= mapConcurrently (\oaContent -> do
                                        let prefixdwl = case (osmAndContentRoot oaContent) of
                                              "region" -> "/download.php?standard=yes&file="
-                                             "road_region" -> "/road-indexes/"
-                                             "srtmcountry" -> "/srtm-countries/"
+                                             "road_region" -> "/download.php?road=yes&file="
+                                             "hillshade" -> "/download.php?hillshade=yes&file="
+                                             "wiki" -> "/download.php?wiki=yes&file="
+                                             "srtmcountry" -> "/download.php?srtmcountry=yes&file="
                                              p -> "/" ++ p ++ "/"
                                        displayConsoleRegions $ do
-                                         req <- parseRequest ("http://download.osmand.net" ++ prefixdwl ++ (osmAndContentName oaContent))
+                                         req <- parseRequest ("https://download.osmand.net" ++ prefixdwl ++ (osmAndContentName oaContent))
                                          req' <- case (ph, pp) of
-                                                   (Just h, Just p) -> return $ addProxy (ByteString.pack h) p req
-                                                   _ -> return req
+                                                   (Just h, Just p) -> return $ addProxy (ByteString.pack h) p (req { responseTimeout = responseTimeoutNone })
+                                                   _ -> return (req { responseTimeout = responseTimeoutNone })
                                          manager <- newManager tlsManagerSettings
                                          runResourceT $ do
                                            res <- http req' manager
                                            case lookup hContentLength (responseHeaders res) of
                                              Just cl -> do
+                                               -- liftIO $ putStrLn $ "Try to dwl: " <> "https://download.osmand.net" <> prefixdwl <> osmAndContentName oaContent
                                                pg <- liftIO $ newProgressBar def { pgTotal = read (ByteString.unpack cl)
                                                                                  , pgWidth = 100
                                                                                  , pgOnCompletion = Just $ "Download " ++ (osmAndContentName oaContent) ++ " done :percent after :elapsed seconds"
@@ -101,7 +105,9 @@ osmand (OptArgs d ph pp f) = do
                                                runConduit $ responseBody res .| updateProgress pg .| sinkFile (d </> (osmAndContentName oaContent))
                                                liftIO $ complete pg
                                              Nothing -> do
-                                               liftIO $ print res
+                                               -- pure ()
+                                               liftIO $ print (responseHeaders res)
+                                               liftIO $ print req'
                                                liftIO $ putStrLn "Can't fetch hContentLength"
                                    )
   return ()

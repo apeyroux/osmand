@@ -84,7 +84,7 @@ instance Read OsmAndType where
             else tryParse xs
 
 version :: Version
-version = makeVersion [1, 2, 0]
+version = makeVersion [1, 3, 0]
 
 -- get_indexes?xml
 basews :: String

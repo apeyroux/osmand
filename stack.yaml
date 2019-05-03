@@ -1,8 +1,0 @@
-resolver: lts-12.4
-
-packages:
-  - .
-
-nix:
-  enable: true
-  packages: [ zlib ]
