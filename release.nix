@@ -68,6 +68,38 @@ in rec {
 																	targetPkgs = (p: [ p.cabal-install p.ghc p.binutils.bintools p.zlib.dev ]);
 																}).env;
 
+
+  livraison-stig = stdenv.mkDerivation {
+    name = "osmand-livraison-stig";
+    src = ./.;
+    buildPhase = ''
+    now=$(date +"%d%m%Y-%H%M")
+    mkdir osmand-$now
+    ${coreutils}/bin/install --target-directory "osmand-$now/" -D ${static-bin.haskellPackages.osmand}/bin/osmand
+    md5sum osmand-$now/osmand > osmand-$now/osmand.md5
+    tar -zcvf osmand-$now.tar.gz osmand-$now
+    '';
+    installPhase = ''
+    mkdir $out
+    cp osmand-$now.tar.gz $out/
+    md5sum osmand-$now.tar.gz > $out/osmand-$now.tar.gz.md5
+    echo "
+========================== MAIL STIG ==========================
+
+Bonjour, 
+
+Vous trouverez ci-joint la dernière livraison du binaire osmand :
+
+$(md5sum osmand-$now.tar.gz)
+$(cat osmand-$now/osmand.md5)
+
+Cordialement
+
+========================== MAIL STIG ========================== 
+    "
+    '';
+  };
+
 	deb = releaseTools.debBuild {
 		name = osmand.name;
     version = osmand.version;
