@@ -1,6 +1,7 @@
 with import <nixpkgs> {};
 
 let
+  version = "1.3.0";
   drv = (haskellPackages.override {
    overrides = self: super: rec {
    };

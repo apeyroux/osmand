@@ -12,15 +12,13 @@ category:            geography, library
 build-type:          Simple
 extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
-allow_newer:         true
-
 
 source-repository head
   type:     git
   location: https://github.com/apeyroux/osmand
                      
 library
-  exposed-modules:     OsmAnd
+  exposed-modules:     OsmAnd, Main
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -Wall
@@ -30,7 +28,6 @@ library
                      , hxt-http
                      , mtl
                      , data-default
-                     
 executable osmand
   main-is:             Main.hs
   ghc-options:         -Wall
